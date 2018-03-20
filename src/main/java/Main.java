@@ -1,49 +1,57 @@
-import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
-import it.unimi.dsi.law.warc.io.GZWarcRecord;
-import it.unimi.dsi.law.warc.io.WarcRecord;
-import it.unimi.dsi.law.warc.io.examples.SequentialWarcRecordRead;
-
-
-
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
+import java.util.Iterator;
+
+import org.apache.commons.io.IOUtils;
+import org.jwat.common.HeaderLine;
+import org.jwat.warc.WarcReader;
+import org.jwat.warc.WarcReaderFactory;
+import org.jwat.warc.WarcRecord;
 
 /**
- * Created by chaoqunhuang on 3/8/18.
+ * Created by chaoqunhuang on 3/12/18.
  */
-
 public class Main {
-    final static int IO_BUFFER_SIZE = 64 * 1024;
+    static String warcFile = "/Users/chaoqunhuang/Documents/LearningToRank/01.warc";
 
-    public static void main(String arg[]) throws IOException {
+    public static void main(String arg[]) {
+        File file = new File(warcFile);
         try {
-            final String warcFile = "/Users/chaoqunhuang/Documents/LearningToRank/01";
-            final boolean isGZipped = true;
-            final WarcRecord record = isGZipped ? new GZWarcRecord() : new WarcRecord();
+            InputStream in = new FileInputStream(file);
 
-            final FastBufferedInputStream in = new FastBufferedInputStream(
-                    new FileInputStream(new File(warcFile + ".warc" + (isGZipped ? ".gz" : ""))), IO_BUFFER_SIZE);
+            int records = 0;
+            int errors = 0;
 
-            for (; ; ) {
+            org.jwat.warc.WarcReader reader = WarcReaderFactory.getReader(in);
+            WarcRecord record;
 
-                if (record.read(in) == -1) break;
-                if (isGZipped) System.out.println("GZip header:\n" + ((GZWarcRecord) record).gzheader);
-                System.out.println("WARC header:\n" + record.header);
-                System.out.println("First ten bytes of block:");
-
-                int n = 10, r;
-                while ((r = record.block.read()) != -1 && n-- > 0)
-                    System.out.print(Integer.toHexString(r) + " ");
-
-                System.out.println("\n");
-
+            while ((record = reader.getNextRecord()) != null) {
+                printRecord(record);
+                System.out.println(IOUtils.toString(record.getPayload().getInputStream()));
+                ++records;
+                break; // test one doc
             }
-        } catch (WarcRecord.FormatException e) {
+
+            System.out.println("--------------");
+            System.out.println("       Records: " + records);
+            System.out.println("        Errors: " + errors);
+            reader.close();
+            in.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
             e.printStackTrace();
         }
+    }
 
 
+    public static void printRecord(WarcRecord record) {
+        System.out.println("--------------");
+        for (HeaderLine hl : record.getHeaderList()) {
+            System.out.println(hl.name + ":" + hl.value);
+        }
     }
 }
